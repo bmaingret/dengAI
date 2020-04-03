@@ -25,3 +25,18 @@ def load_data():
     print(f'shape train merge: {train_df.shape}')
     
     return train_df, test_features_df
+
+def create_json_obj(city, start_date, timeserie):
+    cities_dict = {'iq': 0, 'sj': 1}
+    dic_ts = {'start': str(start_date), 'target': timeserie[:, 0].tolist(), 'cat': [cities_dict[city]], 'dynamic_feat': timeserie[:,1:].T.tolist()}
+    json_ts = json.dumps(dic_ts)
+    return json_ts
+
+def write_json(timeseries, filename):
+    with open(filename, 'wb') as f:
+        for city, data in timeseries.items():
+            json_line = create_json_obj(city, data[0], data[1]) + '\n'
+            json_line = json_line.encode('utf-8')
+            f.write(json_line)
+            print(f'Wrote {len(json_line)} chars to {filename}')
+    print(f'{filename} saved')
