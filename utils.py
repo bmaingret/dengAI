@@ -6,6 +6,7 @@ Created on Wed Apr  1 12:16:19 2020
 """
 
 import pandas as pd
+import json
 
 def load_data():
     data_dir = './data'
@@ -28,7 +29,13 @@ def load_data():
 
 def create_json_obj(city, start_date, timeserie):
     cities_dict = {'iq': 0, 'sj': 1}
-    dic_ts = {'start': str(start_date), 'target': timeserie[:, 0].tolist(), 'cat': [cities_dict[city]], 'dynamic_feat': timeserie[:,1:].T.tolist()}
+    dic_ts = {
+        'start': str(start_date),
+        'target': timeserie[:, 0].tolist(),
+        'cat': [cities_dict[city]],
+        'dynamic_feat': timeserie[:,1:].T.tolist()
+    }
+    
     json_ts = json.dumps(dic_ts)
     return json_ts
 
