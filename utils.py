@@ -12,6 +12,8 @@ TRAIN_JSON = './data/train.json'
 TEST_JSON_SJ = './data/test_sj.json'
 TEST_JSON_IQ = './data/test_iq.json'
 
+SUB_CSV_TEMPLATE = './data/submission_format.csv'
+
 CONTEXT_LENGTH = 260
 PREDICTION_LENGTH_IQ = 156
 PREDICTION_LENGTH_SJ = 260
