@@ -8,6 +8,9 @@ Created on Wed Apr  1 12:16:19 2020
 import pandas as pd
 import json
 
+train_json = './data/train.json'
+test_json = './data/test.json'
+
 def load_data():
     data_dir = './data'
     train_features_csv = f'{data_dir}/dengue_features_train.csv'
@@ -47,3 +50,4 @@ def write_json(timeseries, filename):
             f.write(json_line)
             print(f'Wrote {len(json_line)} chars to {filename}')
     print(f'{filename} saved')
+
