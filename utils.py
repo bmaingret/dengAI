@@ -9,10 +9,12 @@ import pandas as pd
 import json
 
 TRAIN_JSON = './data/train.json'
-TEST_JSON = './data/test.json'
+TEST_JSON_SJ = './data/test_sj.json'
+TEST_JSON_IQ = './data/test_iq.json'
 
 CONTEXT_LENGTH = 260
-PREDICTION_LENGTH = 260
+PREDICTION_LENGTH_IQ = 156
+PREDICTION_LENGTH_SJ = 260
 
 CITIES_DICT = {'iq': 0, 'sj': 1}
 
