@@ -9,6 +9,7 @@ import numpy as np
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.impute import KNNImputer
+from sklearn.preprocessing import MaxAbsScaler
 
 CITIES_DICT = {'iq': 0, 'sj': 1}
 
@@ -92,10 +93,15 @@ if __name__=='__main__':
     for city in CITIES_DICT:
         # training data
         city_data = train_df[train_df.city==city]
-        start_date = city_data.week_start_date.iloc[0]
         train_features = city_data.drop(columns=d_cols)
         labels = city_data[ 'total_cases']
+        start_date = city_data.week_start_date.iloc[0]
+        
         train_features_imp, imputer = impute_nan(train_features)    
+        
+        transformer = MaxAbsScaler()
+        train_features_imp = transformer.fit_transform(train_features_imp)
+        
         train_data_json.append( create_json_obj(city, 
                                           start_date, 
                                           labels, 
@@ -103,8 +109,12 @@ if __name__=='__main__':
         # testing data
         city_data_test = test_features_df[test_features_df.city==city]
         test_features = city_data_test.drop(columns=d_cols, errors='ignore') # so we don't get an error on `total_cases`
+        
         test_features_imp, _ = impute_nan(test_features, imputer)
+        test_features_imp = transformer.fit_transform(train_features_imp)
+        
         test_features_imp_w_context = np.append(train_features_imp, test_features_imp, axis=0)
+        
         test_data_json.append( create_json_obj(city, 
                                           start_date, 
                                           labels, 
