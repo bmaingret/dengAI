@@ -1,0 +1,4 @@
+jobname,epochs,time_freq,num_cells,num_layers,mini_batch_size,learning_rate,early_stopping_patience,prediction_length,context_length
+all-feat-no-scale-2020-04-09-15-05-55-09,100,W,40,2,128,0.003,10,260,260
+jobname,epochs,time_freq,num_cells,num_layers,mini_batch_size,learning_rate,early_stopping_patience,prediction_length,context_length
+all-feat-no-scale-2020-04-09-15-05-55-09,100,W,40,2,128,0.003,10,156,260
