@@ -39,6 +39,7 @@ def load_data():
     
     return train_df, test_features_df
 
+"""
 def create_json_obj(city, start_date, timeserie):
     dic_ts = {
         'start': str(start_date),
@@ -66,3 +67,4 @@ def read_json(filename):
         for line in json_file:
             data.append(json.loads(line))
     return data
+"""
