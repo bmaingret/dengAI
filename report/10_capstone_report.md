@@ -143,20 +143,95 @@ The target variable `total_cases` is left skewed. Taking the log of it allows fo
 
 ![](./assets/target_hist.png)
 
+|                                       |   count |        mean |        std |          min |          25% |         50% |         75% |         max |   std_from_mean |
+|:--------------------------------------|--------:|------------:|-----------:|-------------:|-------------:|------------:|------------:|------------:|----------------:|
+| year                                  |    1456 | 2001.03     |  5.40831   | 1990         | 1997         | 2002        | 2005        | 2010        |         1.65826 |
+| weekofyear                            |    1456 |   26.5034   | 15.0194    |    1         |   13.75      |   26.5      |   39.25     |   53        |         1.76415 |
+| ndvi_ne                               |    1262 |    0.142294 |  0.140531  |   -0.40625   |    0.04495   |    0.128817 |    0.248483 |    0.508357 |         2.60486 |
+| ndvi_nw                               |    1404 |    0.130553 |  0.119999  |   -0.4561    |    0.0492167 |    0.121429 |    0.2166   |    0.454429 |         2.69899 |
+| ndvi_se                               |    1434 |    0.203783 |  0.0738597 |   -0.0155333 |    0.155087  |    0.19605  |    0.248846 |    0.538314 |         4.52928 |
+| ndvi_sw                               |    1434 |    0.202305 |  0.0839027 |   -0.0634571 |    0.144209  |    0.18945  |    0.246982 |    0.546017 |         4.09655 |
+| precipitation_amt_mm                  |    1443 |   45.7604   | 43.7155    |    0         |    9.8       |   38.34     |   70.235    |  390.6      |         7.88826 |
+| reanalysis_air_temp_k                 |    1446 |  298.702    |  1.36242   |  294.636     |  297.659     |  298.646    |  299.834    |  302.2      |         2.5676  |
+| reanalysis_avg_temp_k                 |    1446 |  299.226    |  1.26172   |  294.893     |  298.257     |  299.289    |  300.207    |  302.929    |         2.93489 |
+| reanalysis_dew_point_temp_k           |    1446 |  295.246    |  1.52781   |  289.643     |  294.119     |  295.641    |  296.46     |  298.45     |         2.09689 |
+| reanalysis_max_air_temp_k             |    1446 |  303.427    |  3.2346    |  297.8       |  301         |  302.4      |  305.5      |  314        |         3.26868 |
+| reanalysis_min_air_temp_k             |    1446 |  295.719    |  2.56536   |  286.9       |  293.9       |  296.2      |  297.9      |  299.9      |         1.62973 |
+| reanalysis_precip_amt_kg_per_m2       |    1446 |   40.1518   | 43.4344    |    0         |   13.055     |   27.245    |   52.2      |  570.5      |        12.2103  |
+| reanalysis_relative_humidity_percent  |    1446 |   82.162    |  7.1539    |   57.7871    |   77.1771    |   80.3014   |   86.3579   |   98.61     |         2.29917 |
+| reanalysis_sat_precip_amt_mm          |    1443 |   45.7604   | 43.7155    |    0         |    9.8       |   38.34     |   70.235    |  390.6      |         7.88826 |
+| reanalysis_specific_humidity_g_per_kg |    1446 |   16.7464   |  1.54249   |   11.7157    |   15.5571    |   17.0871   |   17.9782   |   20.4614   |         2.40844 |
+| reanalysis_tdtr_k                     |    1446 |    4.90375  |  3.54645   |    1.35714   |    2.32857   |    2.85714  |    7.625    |   16.0286   |         3.13689 |
+| station_avg_temp_c                    |    1413 |   27.1858   |  1.29235   |   21.4       |   26.3       |   27.4143   |   28.1571   |   30.8      |         2.79663 |
+| station_diur_temp_rng_c               |    1413 |    8.05933  |  2.12857   |    4.52857   |    6.51429   |    7.3      |    9.56667  |   15.8      |         3.63656 |
+| station_max_temp_c                    |    1436 |   32.4524   |  1.95932   |   26.7       |   31.1       |   32.8      |   33.9      |   42.2      |         4.97498 |
+| station_min_temp_c                    |    1442 |   22.1021   |  1.57407   |   14.7       |   21.1       |   22.2      |   23.3      |   25.6      |         2.22217 |
+| station_precip_mm                     |    1434 |   39.3264   | 47.4553    |    0         |    8.7       |   23.85     |   53.9      |  543.3      |        10.62    |
+| total_cases                           |    1456 |   24.6751   | 43.596     |    0         |    5         |   12        |   28        |  461        |        10.0084  |
+
+Most values are positive except for `ndvi`. Although not perfect, when looking at the number of standard deviation from the mean for max values, we don't see anything suspicious.
+
+`reanalysis_relative_humidity_percent` is between 0 and 100 as expected.
+
+We have two different scales for temperature features: Kelvin and Celsius. Since we probably won't use both `station` features and `reanalysis` features at the same time it shouldn't be an issue.
+
 #### Correlations 
 
+![](./assets/corr_heatmap.png)
 
-#### Time analysis
+There is no obvious correlation between features and the target `total_cases`. Also there are some differencies between the two cities:
 
+
+
+|                                       |   iq_total |   sj_total |
+|:--------------------------------------|-----------:|-----------:|
+| total_cases                           |   1        |   1        |
+| reanalysis_specific_humidity_g_per_kg |   0.236476 |   0.287134 |
+| reanalysis_dew_point_temp_k           |   0.230401 |   0.21269  |
+| reanalysis_min_air_temp_k             |   0.214514 |   0.207947 |
+| station_min_temp_c                    |   0.211702 |   0.203774 |
+| year                                  |   0.179451 |   0.196617 |
+| reanalysis_tdtr_k                     |   0.134425 |   0.194532 |
+| reanalysis_relative_humidity_percent  |   0.130083 |   0.189901 |
+| station_avg_temp_c                    |   0.11307  |   0.187943 |
+| reanalysis_precip_amt_kg_per_m2       |   0.101171 |   0.181917 |
+
+
+
+As stated before we can seen some strong correlations between some of the features.
+
+| level_0                               | level_1                               |        0 |
+|:--------------------------------------|:--------------------------------------|---------:|
+| reanalysis_sat_precip_amt_mm          | precipitation_amt_mm                  | 1        |
+| reanalysis_specific_humidity_g_per_kg | reanalysis_dew_point_temp_k           | 0.997051 |
+| reanalysis_tdtr_k                     | reanalysis_max_air_temp_k             | 0.918578 |
+| reanalysis_avg_temp_k                 | reanalysis_air_temp_k                 | 0.901777 |
+| station_diur_temp_rng_c               | reanalysis_tdtr_k                     | 0.881176 |
+| ndvi_nw                               | ndvi_ne                               | 0.850902 |
+| station_diur_temp_rng_c               | reanalysis_max_air_temp_k             | 0.834263 |
+| ndvi_sw                               | ndvi_se                               | 0.820924 |
+| station_max_temp_c                    | station_avg_temp_c                    | 0.764576 |
+| station_max_temp_c                    | reanalysis_max_air_temp_k             | 0.763446 |
+| station_avg_temp_c                    | reanalysis_avg_temp_k                 | 0.75133  |
+| station_avg_temp_c                    | reanalysis_specific_humidity_g_per_kg | 0.747809 |
+| reanalysis_min_air_temp_k             | reanalysis_air_temp_k                 | 0.736765 |
+| station_min_temp_c                    | reanalysis_min_air_temp_k             | 0.720701 |
+| station_min_temp_c                    | reanalysis_air_temp_k                 | 0.719612 |
+| reanalysis_tdtr_k                     | ndvi_ne                               | 0.673935 |
+| ndvi_sw                               | ndvi_ne                               | 0.669504 |
+| reanalysis_max_air_temp_k             | ndvi_ne                               | 0.63433  |
+| ndvi_se                               | ndvi_ne                               | 0.61438  |
+| reanalysis_dew_point_temp_k           | reanalysis_avg_temp_k                 | 0.614268 |
+| reanalysis_specific_humidity_g_per_kg | reanalysis_avg_temp_k                 | 0.612484 |
+| reanalysis_max_air_temp_k             | ndvi_nw                               | 0.606775 |
+| reanalysis_relative_humidity_percent  | reanalysis_precip_amt_kg_per_m2       | 0.593928 |
+| ndvi_se                               | ndvi_nw                               | 0.555809 |
+| reanalysis_relative_humidity_percent  | reanalysis_dew_point_temp_k           | 0.553766 |
+| reanalysis_dew_point_temp_k           | reanalysis_air_temp_k                 | 0.529771 |
 
 ### 2. Exploratory visualization
 
 > A visualization has been provided that summarizes or extracts a relevant characteristic or feature about the dataset or input data with thorough discussion. Visual cues are clearly defined.
-
-#### Focus on total cases
-
-pike and seasonality
-
 
 
 
