@@ -6,15 +6,18 @@ import json
 import pandas as pd
 import numpy as np
 
+from sklearn.compose import make_column_transformer
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
-from sklearn.impute import KNNImputer
 from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MaxAbsScaler
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.pipeline import Pipeline
 
 CITIES = {'iq': 0, 'sj': 1} # Categorical variable encoding
 PREDICTION_LENGTH = {'iq': 156, 'sj': 260} # Prediction length is fixed by the test set
 
-def create_json_obj(city, start_date, labels, features):
+def create_json_obj(city, start_date, labels, features=None, category=None):
     '''Creates a JSON object that can be fed to AWS SageMaker DeepAR model
       :param city: a city identifier as one of the keys of `CITIES`
       :param start_date: a string identifying the start week of the features in the following format: '1990-04-30'
@@ -24,13 +27,17 @@ def create_json_obj(city, start_date, labels, features):
       '''    
     dic_ts = {
         "start": str(start_date),
-        "target": labels.tolist(),
-        "cat": [CITIES[city]],
-        "dynamic_feat": features.T.tolist()
-    }
-    print(f'>> JSON created for {city}. Start date: (start_date) / Target: {labels.shape} / Features: {features.T.shape}')
+        "target": labels.tolist()}
+    if category is not None:
+        dic_ts["cat"] = [category]
+    if features is not None:
+        dic_ts["dynamic_feat"] = features.T.tolist()
+        features_shape = f'/ Features: {features.T.shape}'
+        
+    print(f'>> JSON created for {city}. Start date: {start_date} / Target: {labels.shape} '+ features_shape)
     json_str = json.dumps(dic_ts)
     return json_str
+
 
 def write_json(json_strs, filename):
     '''Write JSON objects to the filename pathn one by line (JSON Lines format)
@@ -52,56 +59,19 @@ def split_train_validation(train_df, labels, prediction_length):
       :prediction_length: the prediction length that will be used
       :return: train features, validation features, train labels, validation labels     
       '''      
-    train_features = train_df[:-prediction_length]
-    train_labels = labels[:-prediction_length]
+    train_features = train_df[:-prediction_length].copy()
+    train_labels = labels[:-prediction_length].copy()
     
-    train_test_features = train_df
-    train_test_labels = labels
+    train_test_features = train_df.copy()
+    train_test_labels = labels.copy()
     
-    validation_features = train_df
-    validation_labels = labels[:-prediction_length]
+    validation_features = train_df.copy()
+    validation_labels = labels[:-prediction_length].copy()
     
     return train_features, train_test_features, validation_features, train_labels, train_test_labels, validation_labels
 
-def impute_nan(features, imputer=None): 
-    '''Impute features using sklean.impute.IterativeImputer.
-        If no instance is provided a new one is fitted to the features provided
-      :param features: array-like, shape (n_samples, n_features)
-      :param imputer: instance of sklearn.imputer.IterativeImputer already fitted.
-      :return: imputed input data
-      '''         
-    if imputer==None:
-        imputer = IterativeImputer(max_iter=100, random_state=0)
-        imputer = imputer.fit(features)
-    features_imp = imputer.transform(features)
-    return features_imp, imputer
-
-def scale(features, scaler=None):  
-    '''Scale features using sklearn.preprocessing.StandardScaler.
-        If no instance is provided a new one is fitted to the features provided
-      :param features: array-like, shape (n_samples, n_features)
-      :param scaler: instance of sklearn.preprocessing.StandardScaler already fitted.
-      :return: scaled input data
-      '''       
-    if scaler==None:
-        scaler = StandardScaler()
-        scaler = scaler.fit(features)
-    features_scaled = scaler.transform(features)
-    return features_scaled, scaler
-
-def pprocess(features, imputer=None, scaler=None):
-    '''Preprocess the features using a provided fitted imputer and scaler or
-        else create new ones and fit them on features.
-      :param features: array-like, shape (n_samples, n_features)
-      :param imputer: instance of sklearn.imputer.IterativeImputer already fitted.
-      :param scaler: instance of sklearn.preprocessing.StandardScaler already fitted.
-      :return: imputed and scaled data, imputer and scaler
-      '''      
-    features_imp, imputer = impute_nan(features, imputer)
-    features_scaled, scaler = scale(features_imp, scaler)
-    return features_scaled, imputer, scaler
-
 if __name__=='__main__':
+    # Command-line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('--context_length_iq', type=int, default=PREDICTION_LENGTH['iq'])
     parser.add_argument('--context_length_sj', type=int, default=PREDICTION_LENGTH['sj'])
@@ -109,6 +79,7 @@ if __name__=='__main__':
     args, _ = parser.parse_known_args()
     print('Received arguments {}'.format(args))
        
+    # Loading data
     train_features_csv = os.path.join('/opt/ml/processing/input', 'dengue_features_train.csv')
     print('Reading input data from {}'.format(train_features_csv))
     train_labels_csv = os.path.join('/opt/ml/processing/input', 'dengue_labels_train.csv')
@@ -119,7 +90,7 @@ if __name__=='__main__':
     train_features_df = pd.read_csv(train_features_csv)
     train_labels_df = pd.read_csv(train_labels_csv)
     test_features_df = pd.read_csv(test_features_csv)
-   
+       
     columns = ['city', 'year', 'weekofyear', 'week_start_date', 'ndvi_ne', 'ndvi_nw',
        'ndvi_se', 'ndvi_sw', 'precipitation_amt_mm', 'reanalysis_air_temp_k',
        'reanalysis_avg_temp_k', 'reanalysis_dew_point_temp_k',
@@ -128,102 +99,118 @@ if __name__=='__main__':
        'reanalysis_relative_humidity_percent', 'reanalysis_sat_precip_amt_mm',
        'reanalysis_specific_humidity_g_per_kg', 'reanalysis_tdtr_k',
        'station_avg_temp_c', 'station_diur_temp_rng_c', 'station_max_temp_c',
-       'station_min_temp_c', 'station_precip_mm', 'total_cases']
-
-
-    train_df = train_features_df.merge(train_labels_df, left_on=['city', 'year', 'weekofyear'], right_on=['city', 'year', 'weekofyear'])
-      
-    #preprocess = make_column_transformer(
-     #   (['age', 'num persons worked for employer'], KBinsDiscretizer(encode='onehot-dense', n_bins=10)),
-      #  (['capital gains', 'capital losses', 'dividends from stocks'], StandardScaler()),
-       # (['education', 'major industry code', 'class of worker'], OneHotEncoder(sparse=False))
-    #)
-    
+       'station_min_temp_c', 'station_precip_mm', 'total_cases'] 
        
     print('Running preprocessing and feature engineering transformations')
-    feature_cols = [0, 1, 2, 3] 
-    d_cols = ['city', 'year', 'weekofyear', 'week_start_date', 'total_cases']
     train_data_json = []
     train_test_data_json = []
     validation_data_json = []
-    test_data_json = []
-    scaler = StandardScaler()       
-    
+    submission_train_data_json = []
+    submission_test_data_json = []
+       
     for city in CITIES:
-        print('Data sets creation for {city}')
-        # we could have two training sets with different prediction length for the both cities
-        
+        print(f'Data sets creation for {city}')
+
         # Selecting features and labels, and filtering by `city`
-        city_data_train = train_df[train_df.city==city]
-        city_data_test = test_features_df[test_features_df.city==city]
-        train_features = city_data_train.drop(columns=d_cols)
-        test_features = city_data_test.drop(columns=d_cols, errors='ignore')
-        labels = city_data_train[ 'total_cases']
+        _train_features = train_features_df[train_features_df.city==city]
+        _test_features = test_features_df[test_features_df.city==city]
+        __train_labels = train_labels_df[train_labels_df.city==city]
+        _train_labels = __train_labels['total_cases'] # For the labels we take the log of it
 
         # start_date of the timeserie
-        start_date = city_data_train.week_start_date.iloc[0]
-        
+        start_date = _train_features.week_start_date.iloc[0]
+
         #splitting training data
-        (train_features, 
-         train_test_features,
-         validation_features,
-         train_labels,
-         train_test_labels,
-         validation_labels) = split_train_validation(train_features, labels, PREDICTION_LENGTH[city])
-              
-        # preprocessing
-        train_features, imputer, scaler = pprocess(train_features)
-        train_test_features, _, _ = pprocess(train_test_features, imputer, scaler)     
-        validation_features, _, _ = pprocess(validation_features, imputer, scaler)     
-        
-        test_features, _, _ = pprocess(test_features, imputer, scaler)     
-        
+        (train_train_features, 
+            train_test_features,
+            train_validation_features,
+            train_train_labels,
+            train_test_labels,
+            train_validation_labels) = split_train_validation(_train_features, _train_labels, PREDICTION_LENGTH[city])
+
+        # setting the features/labels for the test set used for submissions
+        submission_train_features = _train_features.copy()
+        submission_train_labels = _train_labels.copy()
         # test_features is only the features in the future for which we want to predict
-        # we need to add the training(initial training data set == validation in our case) features
-        test_features = np.concatenate((validation_features, test_features), axis=0)
-        
+        # we need to add the training features since it used for predictions
+        submission_test_features = pd.concat([submission_train_features, _test_features], axis=0)        
+
+
+        # preprocessing training data      
+        features = ['reanalysis_dew_point_temp_k', 'reanalysis_avg_temp_k', 'reanalysis_max_air_temp_k', 'reanalysis_min_air_temp_k', 'reanalysis_specific_humidity_g_per_kg']
+        features_ix = [columns.index(feat) for feat in features]
+
+        pipe = Pipeline([
+            ('impute', IterativeImputer(max_iter=100, random_state=0)),
+            ('scale', MaxAbsScaler())])
+
+        column_trans = make_column_transformer(
+            (pipe, features_ix))
+
+
+        train_train_features = column_trans.fit_transform(train_train_features)
+        train_test_features = column_trans.fit_transform(train_test_features)
+        train_validation_features = column_trans.fit_transform(train_validation_features)
+
+        # preprocessing for submission
+        submission_train_features = column_trans.fit_transform(submission_train_features)
+        submission_test_features = column_trans.fit_transform(submission_test_features)
+
         # create our json object')
         train_data_json.append( create_json_obj(city, 
-                                          start_date, 
-                                          train_labels, 
-                                          train_features[:, :]) )
-        print('> Train data created')
+                                            start_date, 
+                                            train_train_labels, 
+                                            train_train_features) )
+
         train_test_data_json.append( create_json_obj(city, 
-                                          start_date, 
-                                          train_test_labels, 
-                                          train_test_features[:, :]) )   
-        print('> Test_train data created')
+                                            start_date, 
+                                            train_test_labels, 
+                                            train_test_features) )   
+
         validation_data_json.append( create_json_obj(city, 
-                                          start_date, 
-                                          validation_labels, 
-                                          validation_features[:, :]) )        
-        print('> Validation data created')
-        test_data_json.append( create_json_obj(city, 
-                                          start_date, 
-                                          labels, 
-                                          test_features[:, :]) )
-        print('> Test data created')
-    
+                                            start_date, 
+                                            train_validation_labels, 
+                                            train_validation_features) )     
+
+        submission_train_data_json.append( create_json_obj(city, 
+                                            start_date, 
+                                            submission_train_labels, 
+                                            submission_train_features) )
+
+        submission_test_data_json.append( create_json_obj(city, 
+                                            start_date, 
+                                            submission_train_labels, 
+                                            submission_test_features) )
+
     # json files path
     train_data_json_output_path = os.path.join('/opt/ml/processing/output', 'train_pp.json')
-    
+    train_data_json_output_path_sj = os.path.join('/opt/ml/processing/output', 'train_pp_sj.json')
+    train_data_json_output_path_iq = os.path.join('/opt/ml/processing/output', 'train_pp_iq.json')
+
     train_test_data_json_output_path_sj = os.path.join('/opt/ml/processing/output', 'train_test_pp_sj.json')
     train_test_data_json_output_path_iq = os.path.join('/opt/ml/processing/output', 'train_test_pp_iq.json')        
-    
+
     validation_data_json_output_path_sj = os.path.join('/opt/ml/processing/output', 'validation_pp_sj.json')
     validation_data_json_output_path_iq = os.path.join('/opt/ml/processing/output', 'validation_pp_iq.json')    
-    
-    test_data_json_output_path_sj = os.path.join('/opt/ml/processing/output', 'test_pp_sj.json')
-    test_data_json_output_path_iq = os.path.join('/opt/ml/processing/output', 'test_pp_iq.json')
+
+    submission_train_data_json_output_path_sj = os.path.join('/opt/ml/processing/output', 'submission_train_pp_sj.json')
+    submission_train_data_json_output_path_iq = os.path.join('/opt/ml/processing/output', 'submission_train_pp_iq.json')
+
+    submission_test_data_json_output_path_sj = os.path.join('/opt/ml/processing/output', 'submission_test_pp_sj.json')
+    submission_test_data_json_output_path_iq = os.path.join('/opt/ml/processing/output', 'submission_test_pp_iq.json')
 
     #write our json files 
     write_json(train_data_json, train_data_json_output_path)
+    write_json([train_data_json[CITIES['sj']]], train_data_json_output_path_sj)
+    write_json([train_data_json[CITIES['iq']]], train_data_json_output_path_iq)    
 
     write_json([train_test_data_json[CITIES['sj']]], train_test_data_json_output_path_sj)
     write_json([train_test_data_json[CITIES['iq']]], train_test_data_json_output_path_iq)    
-    
+
     write_json([validation_data_json[CITIES['sj']]], validation_data_json_output_path_sj)
     write_json([validation_data_json[CITIES['iq']]], validation_data_json_output_path_iq)    
-    
-    write_json([test_data_json[CITIES['sj']]], test_data_json_output_path_sj)
-    write_json([test_data_json[CITIES['iq']]], test_data_json_output_path_iq)
+
+    write_json([submission_train_data_json[CITIES['sj']]], submission_train_data_json_output_path_sj)
+    write_json([submission_train_data_json[CITIES['iq']]], submission_train_data_json_output_path_iq)
+    write_json([submission_test_data_json[CITIES['sj']]], submission_test_data_json_output_path_sj)
+    write_json([submission_test_data_json[CITIES['iq']]], submission_test_data_json_output_path_iq)
