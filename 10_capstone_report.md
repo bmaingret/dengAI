@@ -128,12 +128,20 @@ We have 156 and 260 inputs the test data for Iquitos and San Juan respectively.
 
 #### Missing values
 
-We have a few missing values for certain features both for train and test data sets, but the target, city, and date information are complete.
+There are a few missing values for certain features both for train and test data sets, but the target, city, and date information are complete.
 
+The most missing values were for the `ndvi` features. They are quite correlated to each other so we were able to impute them.
+
+Similarly `station` features had some missing values but since they are mostly 100% correlated with the `reanalysis` we will be able to simply drop these features.
+
+We also had an issue with the 53th week for several years.
 
 
 #### Descriptive statistics
 
+The target variable `total_cases` is left skewed. Taking the log of it allows for a good normalization for SJ but falls short for IQ.
+
+![](./assets/target_hist.png)
 
 #### Correlations 
 
