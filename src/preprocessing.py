@@ -25,6 +25,8 @@ def create_json_obj(city, start_date, labels, features=None, category=None):
       :param features: a DataFrame with feature columns
       :return: a JSON object as string {'start': start_date (str), 'target': labels (list), 'cat': (int), 'dynamic_feat': features (list)}
       '''    
+    features_shape = 'no shape'
+    
     dic_ts = {
         "start": str(start_date),
         "target": labels.tolist()}
@@ -115,7 +117,8 @@ if __name__=='__main__':
         _train_features = train_features_df[train_features_df.city==city]
         _test_features = test_features_df[test_features_df.city==city]
         __train_labels = train_labels_df[train_labels_df.city==city]
-        _train_labels = __train_labels['total_cases'] # For the labels we take the log of it
+        #_train_labels = np.log(1+__train_labels['total_cases']) # For the labels we take the log of it
+        _train_labels = __train_labels['total_cases']
 
         # start_date of the timeserie
         start_date = _train_features.week_start_date.iloc[0]
@@ -137,12 +140,12 @@ if __name__=='__main__':
 
 
         # preprocessing training data      
-        features = ['reanalysis_dew_point_temp_k', 'reanalysis_avg_temp_k', 'reanalysis_max_air_temp_k', 'reanalysis_min_air_temp_k', 'reanalysis_specific_humidity_g_per_kg']
+        features = ['reanalysis_dew_point_temp_k',  'reanalysis_min_air_temp_k']
         features_ix = [columns.index(feat) for feat in features]
 
         pipe = Pipeline([
             ('impute', IterativeImputer(max_iter=100, random_state=0)),
-            ('scale', MaxAbsScaler())])
+            ('scale', StandardScaler())])
 
         column_trans = make_column_transformer(
             (pipe, features_ix))
@@ -159,28 +162,28 @@ if __name__=='__main__':
         # create our json object')
         train_data_json.append( create_json_obj(city, 
                                             start_date, 
-                                            train_train_labels, 
+                                            train_train_labels,
                                             train_train_features) )
 
         train_test_data_json.append( create_json_obj(city, 
                                             start_date, 
-                                            train_test_labels, 
+                                            train_test_labels,
                                             train_test_features) )   
 
         validation_data_json.append( create_json_obj(city, 
                                             start_date, 
-                                            train_validation_labels, 
+                                            train_validation_labels,
                                             train_validation_features) )     
 
         submission_train_data_json.append( create_json_obj(city, 
                                             start_date, 
-                                            submission_train_labels, 
+                                            submission_train_labels,
                                             submission_train_features) )
 
         submission_test_data_json.append( create_json_obj(city, 
                                             start_date, 
-                                            submission_train_labels, 
-                                            submission_test_features) )
+                                            submission_train_labels,
+                                             submission_test_features) )
 
     # json files path
     train_data_json_output_path = os.path.join('/opt/ml/processing/output', 'train_pp.json')
