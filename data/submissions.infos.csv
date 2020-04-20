@@ -1,0 +1,7 @@
+model_version,submission_score
+target-only-global-2020-04-14-12-27-04-08,33.0264
+features-scaled-2020-04-14-14-45-36-63,30.9471
+2020-04-14--19-39-features-scaled-log-label,35.9087
+2020-04-17--15-19-dew-min-std,30.5745
+2020-04-17--17-45-dew-min-std-longer,29.4423
+2020-04-19--12-42-only-target-optim,30.1755
